@@ -1,14 +1,30 @@
 import csv
+import numpy as np
 from packages import WGUPackage
 import HashMap
 
 with open("distanceCSV.csv", "r") as distanceCSV:
     deliveryDistance = csv.reader(distanceCSV)
     deliveryDistance = list(deliveryDistance)
+    #convert to distance matrix
+    distanceMatrix = np.array(deliveryDistance)
+    #testing Matrix
+    #dimensions = distanceMatrix.shape
+    #rows, columns = dimensions
+    #print ("Rows: ", rows)
+    #print ("Columns:", columns)
+    #print(distanceMatrix)
+
+
 
 with open("addressCSV.csv", "r") as addressCSV:
     deliveryAddress = csv.reader(addressCSV)
     deliveryAddress = list(deliveryAddress)
+
+
+
+
+
 
 # #Code derived from (Tepe, Getting Greedy, Who Moved My Data, 2020 WGU) educational material
 def load_package_data(file_name):
@@ -37,5 +53,9 @@ packageHash = HashMap.ChainingHashTable()
 
 load_package_data('packageCSV.csv')
 
-for i in range (len(packageHash.table)+1):
-    print("Key: {} and Movie {}".format(i+1, packageHash.search(i+1))) #1 to 40 is sent to packageHash.search()
+# Test Package Hash Table
+#for i in range (len(packageHash.table)+1):
+#    print("Key: {} and Package Info {}".format(i+1, packageHash.search(i+1))) #1 to 40 is sent to packageHash.search()
+
+
+
