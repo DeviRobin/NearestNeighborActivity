@@ -2,10 +2,10 @@ from datetime import datetime, timedelta, time
 import packages
 
 
-# def extract_time(dateandtime): #weird little function to get time into good format as days are not simulated in this exercise
-#     datetime_object = dateandtime
-#     onlytime = datetime_object.time()
-#     return onlytime
+def extract_time(dateandtime): #weird little function to get time into good format as days are not simulated in this exercise
+    datetime_object = dateandtime
+    onlytime = datetime_object.time()
+    return onlytime
 
 
 class DeliveryTrucks:

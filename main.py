@@ -1,7 +1,10 @@
+# Devika Prasanth
+# 010101895
 
 from datetime import timedelta
 import datetime
-from packages import WGUPackage
+
+from packages import WGUPackage, update_package_9_address
 import HashMap
 import trucks
 import csv
@@ -86,61 +89,145 @@ load_package_data('packageCSV.csv')
 #    print("Key: {} and Package Info {}".format(i+1, packageHash.search(i+1))) #1 to 40 is sent to packageHash.search()
 
 
+
 # initialize trucks and manually load with packages
 truck1 = trucks.DeliveryTrucks(1, 0.0, "Western Governors University", ("08:00 AM"), [15, 16, 19, 20, 29, 30, 34, 37, 39, 40, 1, 7, 8, 13, 14])
 truck2 = trucks.DeliveryTrucks(2, 0.0, "Western Governors University", ("09:05 AM"), [6,25,2,3,12,17,18,27,28,32,33,35,36,38])
 truck3 = trucks.DeliveryTrucks(3, 0.0, "Western Governors University",("10:30 AM"), [9,4,5,10,11,21,22,23,24,26,31])
 
 
-def find_nearest_neighbor(current_index, unvisited_indices, distanceMatrix):
+# def find_nearest_neighbor(current_index, unvisited_indices, distanceMatrix):
+#     nearest_index = None
+#     shortest_distance = float('inf')
+#
+#     for index in unvisited_indices:
+#         distance = float(distanceMatrix[current_index][index])
+#         if distance < shortest_distance:
+#             shortest_distance = distance
+#             nearest_index = index
+#     return nearest_index, shortest_distance
+
+#Prioritize packages in the truck package list based on deadlines
+#using nested function for clarity
+def prioritize_packages(truck_packages, packageHash):
+    def deadline_sort_key(package_id):
+        package = packageHash.search(package_id)
+        if package.deadline == "EOD":
+            return datetime.datetime.max  # Sets the string "EOD" as the latest possible deadline
+        else:
+            return datetime.datetime.strptime(package.deadline, "%I:%M %p")
+    return sorted(truck_packages, key=deadline_sort_key)
+
+def find_nearest_package(current_index, unvisisted_packages, truck, distanceMatrix, packageHash):
+    nearest_package = None
     nearest_index = None
     shortest_distance = float('inf')
 
-    for index in unvisited_indices:
-        distance = float(distanceMatrix[current_index][index])
+    for pkg_id in unvisisted_packages:
+        package = packageHash.search(pkg_id)
+        destination_index = address_to_index[package.address]
+        distance = float(distanceMatrix[current_index][destination_index])
+
+        #calculating time to reach a destination
+        travel_time = timedelta(hours=distance / truck.tspeed)
+        expected_delivery_time = truck.tTime + travel_time
+
+        #Check to see if package is EOD or had deadline. checks if delivery can be made in time
+        if package.deadline != "EOD":
+            deadline = datetime.datetime.strptime(package.deadline, "%I:%M %p")
+            if expected_delivery_time > deadline:
+                continue  # Skip this package if it can't be delivered on time
+
+        # Prioritize based on shortest distance, or earlier deadline if there is a tie
         if distance < shortest_distance:
+            nearest_package = pkg_id
+            nearest_index = destination_index
             shortest_distance = distance
-            nearest_index = index
-    return nearest_index, shortest_distance
+    return nearest_package, nearest_index, shortest_distance
+
 
 
 def deliver_packages(truck):
-
-    current_index = 0  # Start at the hub
-    unvisited_packages = {pkg_id for pkg_id in truck.tpackages} # creates  a set of
-    unvisited_indices = {address_to_index[packageHash.search(pkg_id).address] for pkg_id in unvisited_packages}
+    current_index = 0  # Start at the hub/Western gov
+    unvisited_packages = prioritize_packages(truck.tpackages,packageHash)
+    #{pkg_id for pkg_id in truck.tpackages} # creates  a set of
+    #unvisited_indices = {address_to_index[packageHash.search(pkg_id).address] for pkg_id in unvisited_packages}
 
     for pkg_id in list(unvisited_packages):
         package = packageHash.search(pkg_id)
         package.set_package_deliveryTruck(truck.tID)
 
     while len(unvisited_packages) > 0:
-        # Find the nearest neighbor
-        nearest_index, distance = find_nearest_neighbor(current_index, unvisited_indices, distanceMatrix)
-        # Update truck's total distance and time
-        #total_distance += distance
+        #update package 9 at 10:30 am
+        update_package_9_address(packageHash,truck.tTime)
+
+        #find nearest package ID from list of unvisited packages while considering deadlines
+        nearest_package, nearest_index, distance = find_nearest_package( current_index, unvisited_packages, truck, distanceMatrix, packageHash)
+
+        if nearest_package is None:
+            print("Delivery issue: packages cannot be delivered in time")
+            break
+
+        # Travel to the nearest location and update truck time
         truck.travel_time(distance)
         truck.update_mileage(distance)
-        # current_time += travel_time
-        # Deliver all packages at the current location
-        for pkg_id in list(unvisited_packages):
-            package = packageHash.search(pkg_id)
-            if address_to_index[package.address] == nearest_index:
-                truck.deliver_package(package)
-                unvisited_packages.remove(pkg_id)
-               # return print(package, truck.tlocation, truck.tTime)
 
-        # Update current location and remove from unvisited indices
+        # Deliver the package
+        package = packageHash.search(nearest_package)
+        truck.deliver_package(package)
+        unvisited_packages.remove(nearest_package)
+
+        # Update the current location
         current_index = nearest_index
-        unvisited_indices.remove(nearest_index)
 
-    # Return to the hub
+        # Return to the hub
     hub_distance = float(distanceMatrix[current_index][0])
     truck.travel_time(hub_distance)
     truck.update_mileage(hub_distance)
+
+    print(
+        f"""
+        Truck: {truck.tID} 
+        Returned to Hub at: {truck.tTime.strftime('%H:%M:%S')} 
+        Mileage: {truck.tmileage:.2f}""")
     return truck.tmileage, truck.tTime.strftime('%H:%M:%S')
+
+
+
+
+    #     # Find the nearest neighbor
+    #     nearest_index, distance = find_nearest_neighbor(current_index, unvisited_indices, distanceMatrix)
+    #     # Update truck's total distance and time
+    #     #total_distance += distance
+    #     truck.travel_time(distance)
+    #     truck.update_mileage(distance)
+    #     # current_time += travel_time
+    #     # Deliver all packages at the current location
+    #     for pkg_id in list(unvisited_packages):
+    #         package = packageHash.search(pkg_id)
+    #         if address_to_index[package.address] == nearest_index:
+    #             truck.deliver_package(package)
+    #             unvisited_packages.remove(pkg_id)
+    #            # return print(package, truck.tlocation, truck.tTime)
+    #
+    #     # Update current location and remove from unvisited indices
+    #     current_index = nearest_index
+    #     unvisited_indices.remove(nearest_index)
+    #
+    # # Return to the hub
+    # hub_distance = float(distanceMatrix[current_index][0])
+    # truck.travel_time(hub_distance)
+    # truck.update_mileage(hub_distance)
+    # return truck.tmileage, truck.tTime.strftime('%H:%M:%S')
 
 
 mileage, end_time = deliver_packages(truck1)
 print(f"Truck 1 completed deliveries with total mileage: {mileage:.2f} and end time: {end_time}")
 
+mileage, end_time = deliver_packages(truck2)
+print(f"Truck 2 completed deliveries with total mileage: {mileage:.2f} and end time: {end_time}")
+
+mileage, end_time = deliver_packages(truck3)
+print(f"Truck 3 completed deliveries with total mileage: {mileage:.2f} and end time: {end_time}")
+# Test Part B look up package function
+#print(packages.lookup_package_by_ID(17,packageHash))
