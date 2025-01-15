@@ -26,7 +26,6 @@ class DeliveryTrucks:
     def deliver_package(self,package):
         package.set_package_status("Delivered")
         package.set_package_deliveryTime(self.tTime)
-        package.set_package_deliveryTruck(self.tID)
         print(f"Package {package.packageID} delivered at {self.tTime.strftime('%H:%M:%S')}")
 
     def travel_time(self, distance): #to travel time
