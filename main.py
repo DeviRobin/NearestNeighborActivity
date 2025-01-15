@@ -91,10 +91,10 @@ load_package_data('packageCSV.csv')
 
 
 # initialize trucks and manually load with packages
-truck1 = trucks.DeliveryTrucks(1, 0.0, "Western Governors University", ("08:00 AM"), [15, 16, 19, 20, 29, 30, 34, 37, 39, 40, 1, 7, 8, 13, 14])
-truck2 = trucks.DeliveryTrucks(2, 0.0, "Western Governors University", ("09:05 AM"), [6,25,2,3,12,17,18,27,28,32,33,35,36,38])
-truck3 = trucks.DeliveryTrucks(3, 0.0, "Western Governors University",("10:30 AM"), [9,4,5,10,11,21,22,23,24,26,31])
-
+truck1 = trucks.DeliveryTrucks(1, 0.0, "Western Governors University", ("08:00 AM"), [1, 7, 8, 13, 14, 15, 16, 19, 20, 29, 30, 34, 37, 39, 40])
+truck2 = trucks.DeliveryTrucks(2, 0.0, "Western Governors University", ("09:05 AM"), [2, 3, 6, 12, 17, 18, 25, 27, 28, 32, 33, 35, 36, 38])
+truck3 = trucks.DeliveryTrucks(3, 0.0, "Western Governors University",("10:00 AM") , [4, 5, 9, 10, 11, 21, 22, 23, 24, 26, 31])
+#NOTE!: MAKE SURE TO MAKE AN EXECTE FCT TO MAKE SURE TRUCK THREE ONLY STARTS WHen truck 1 IS BACK!!!
 
 # def find_nearest_neighbor(current_index, unvisited_indices, distanceMatrix):
 #     nearest_index = None
@@ -122,6 +122,7 @@ def find_nearest_package(current_index, unvisisted_packages, truck, distanceMatr
     nearest_package = None
     nearest_index = None
     shortest_distance = float('inf')
+    highest_priority = float('inf') # In this case a smaller value will = higher priority. so infinity is the lowest priority
 
     for pkg_id in unvisisted_packages:
         package = packageHash.search(pkg_id)
@@ -132,17 +133,20 @@ def find_nearest_package(current_index, unvisisted_packages, truck, distanceMatr
         travel_time = timedelta(hours=distance / truck.tspeed)
         expected_delivery_time = truck.tTime + travel_time
 
-        #Check to see if package is EOD or had deadline. checks if delivery can be made in time
+        #Check to see if package is EOD or has deadline, prioritizes deadline packages
         if package.deadline != "EOD":
             deadline = datetime.datetime.strptime(package.deadline, "%I:%M %p")
-            if expected_delivery_time > deadline:
-                continue  # Skip this package if it can't be delivered on time
+            priority = (deadline - expected_delivery_time).total_seconds()
+        else:
+            priority = float('inf') # sets EOD packages with lower priority
 
-        # Prioritize based on shortest distance, or earlier deadline if there is a tie
-        if distance < shortest_distance:
+        # sets nearest package taking into account priority first, and then distance.
+        # if two packages have the same priority the closest will be selected
+        if priority < highest_priority or (priority == highest_priority and distance < shortest_distance):
             nearest_package = pkg_id
             nearest_index = destination_index
             shortest_distance = distance
+            highest_priority = priority
     return nearest_package, nearest_index, shortest_distance
 
 
@@ -164,8 +168,7 @@ def deliver_packages(truck):
         #find nearest package ID from list of unvisited packages while considering deadlines
         nearest_package, nearest_index, distance = find_nearest_package( current_index, unvisited_packages, truck, distanceMatrix, packageHash)
 
-        if nearest_package is None:
-            print("Delivery issue: packages cannot be delivered in time")
+        if nearest_package is None: #when we are all out of packages
             break
 
         # Travel to the nearest location and update truck time
