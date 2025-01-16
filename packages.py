@@ -1,9 +1,19 @@
 import csv
 import datetime
 from datetime import datetime
+from time import strftime
+
 import trucks
 
-from HashMap import ChainingHashTable
+"""
+Initializes WGUPackage class
+
+Function: 
+    lookup_package_by_ID: Part B - look-up function that takes the package ID as input and returns package details
+    update_package_9_address: function to update update package 9 at 10:20 am when WGUPS is made aware of the correct address
+    
+
+"""
 
 
 
@@ -17,45 +27,23 @@ class WGUPackage:
         self.deadline = deadline
         self.weight = weight
         self.notes = notes
-        self.deliveryStatus = delivery_status
+        self.deliveryStatus = "Hub"
         self.deliveryTime = None
         self.deliveryTruck = None
 
     def __str__(self):
         return f" Package: {self.packageID} Address: {self.address} City: {self.city} State:{self.state} ZIP:{self.zip} Deadline:{self.deadline} Weight:{self.weight} Notes:{self.notes} Status:{self.deliveryStatus}  Delivery:{self.deliveryTime} Truck:{self.deliveryTruck}"
 
-
-    def get_packageID(self):
-        return self.packageID
-
-    def package_update(self, npackageID, naddress, ncity, nstate, nzip, ndeadline, nweight, nnotes):
-        self.packageID = npackageID
-        self.address = naddress
-        self.city = ncity
-        self.state = nstate
-        self.zip = nzip
-        self.deadline = ndeadline
-        self.weight = nweight
-        self.notes = nnotes
-
-
     def set_package_status(self,nstatus):
         self.deliveryStatus = nstatus
-
-    def get_package_status(self):
-        return self.deliveryStatus
 
     def set_package_deliveryTime(self, ndeliveryTime):
         self.deliveryTime = ndeliveryTime
 
-    def get_package_deliveryTime(self):
-        return self.deliveryTime
-
     def set_package_deliveryTruck(self, truckID):
         self.deliveryTruck = truckID
 
-    def get_package_deliveryTruck(self):
-        return self.deliveryTruck
+
 
 """
 Part B -Develop a look-up function that takes the package ID as input and returns each of the following 
@@ -78,9 +66,10 @@ def lookup_package_by_ID (packageID, packageHash):
                 ZIP Code: {package.zip}
                 Package Weight: {package.weight}
                 Delivery Status: {package.deliveryStatus}
-                Delivery Time: {package.deliveryTime.strftime('%H:%M:%S') if package.deliveryTime else "Not Delivered Yet" }""")
+                Delivery Time: {strftime(package.deliveryTime,'%I:%M %p')}""")
         else:
             return {"Error": f"Package ID {packageID} not found"}
+
 # This is a function to update package 9 at 10:20 am when WGUPS is made aware of the correct address
 def update_package_9_address(packageHash, truck_time):
     update_time = datetime.strptime("10:20 AM", "%I:%M %p")
@@ -92,10 +81,3 @@ def update_package_9_address(packageHash, truck_time):
             package_9.city = "Salt Lake City"
             package_9.zip = 84111
             print("Package #9 address updated to 410 S. State St., Salt Lake City, UT 84111")
-
-
-
-
-
-
-
