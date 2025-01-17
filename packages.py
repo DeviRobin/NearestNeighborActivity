@@ -1,3 +1,5 @@
+
+
 import csv
 import datetime
 from datetime import datetime
@@ -55,20 +57,7 @@ corresponding data components:
     •   package weight
     •   delivery status (i.e., at the hub, en route, or delivered), including the delivery time
 """
-def lookup_package_by_ID (packageID, packageHash):
-        package = packageHash.search(packageID)
-        if package is not None:
-            return (f"""
-                Package ID: {package.packageID} 
-                Delivery Address:{package.address}
-                Delivery Deadline: {package.deadline}
-                City: {package.city}
-                ZIP Code: {package.zip}
-                Package Weight: {package.weight}
-                Delivery Status: {package.deliveryStatus}
-                Delivery Time: {strftime(package.deliveryTime,'%I:%M %p')}""")
-        else:
-            return {"Error": f"Package ID {packageID} not found"}
+
 
 # This is a function to update package 9 at 10:20 am when WGUPS is made aware of the correct address
 def update_package_9_address(packageHash, truck_time):

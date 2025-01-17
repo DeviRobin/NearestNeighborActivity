@@ -4,6 +4,8 @@
 
 import datetime
 from datetime import datetime
+
+import packages
 from packages import WGUPackage, update_package_9_address
 import HashMap
 import trucks
@@ -88,47 +90,27 @@ load_package_data('packageCSV.csv')
 # for i in range (len(packageHash.table)+1):
 #    print("Key: {} and Package Info {}".format(i+1, packageHash.search(i+1))) #1 to 40 is sent to packageHash.search()
 
-
+#Look up package ny ID function
+def lookup_package_by_ID(packageID,):
+    package = packageHash.search(packageID)
+    if package is not None:
+        return (f"""
+            Package ID: {package.packageID} 
+            Delivery Address:{package.address}
+            Delivery Deadline: {package.deadline}
+            City: {package.city}
+            ZIP Code: {package.zip}
+            Package Weight: {package.weight}
+            Delivery Status: {package.deliveryStatus}
+            Delivery Time: {(package.deliveryTime)}""")
+    else:
+        return {"Error": f"Package ID {packageID} not found"}
 
 # initialize trucks and manually load with packages
 truck1 = trucks.DeliveryTrucks(1, 0.0, "Western Governors University", "08:00 AM", [1, 7, 8, 13, 14, 15, 16, 19, 20, 29, 30, 34, 37, 39, 40])
 truck2 = trucks.DeliveryTrucks(2, 0.0, "Western Governors University", "09:05 AM", [2, 3, 6, 12, 17, 18, 25, 27, 28, 32, 33, 35, 36, 38])
 truck3 = trucks.DeliveryTrucks(3, 0.0, "Western Governors University", "10:00 AM" , [4, 5, 9, 10, 11, 21, 22, 23, 24, 26, 31]) #datetime.datetime.strptime(truck1.get_truck_time(),'%I:%M %p')
 
-
-def optimize_via_clustering(truck_packages):
-    clusters = [] # list to store clusters of packages
-    clustered_addresses = set() #set to keep track of addresses already clustered
-
-    #Iterate through all packages on the truck
-    for pkg_id in truck_packages:
-        package = packageHash.search(pkg_id) #get package details from hash
-        current_address = package.address # set the current address as package address
-
-        #this ensures that addresses that are already clustered will be skipped
-        if current_address in clustered_addresses:
-            continue
-
-        # Create a new cluster for this address
-        cluster = [pkg_id]
-        clustered_addresses.add(current_address) #adds current address to list of already clustered
-        # get index of current address using the adjacency matrix
-        current_index = address_to_index[current_address]
-        # find other packages close to this package
-        for other_pkg_id in truck_packages: #iterate through the other packages on truck
-            if other_pkg_id == pkg_id:# makes sure we are looking at other packages and not current one
-                continue
-            other_package = packageHash.search(other_pkg_id) # get the other packages details
-            other_index = address_to_index[other_package.address]
-            distance = float(distanceMatrix[current_index][other_index]) # get the distance between the current package index and the other package
-            # Include packages within a threshold distance
-            if distance <= 2.0: # sets threshold distance ( in this case 2 miles)
-                cluster.append(other_pkg_id) # adds the close package to the id cluster
-                clustered_addresses.add(other_package.address) # makes sure the address is added to already clustered addresses
-
-        clusters.append(cluster) # add the newly formed cluster to the list of clusters
-
-    return clusters
 
 
 def deliver_packages(truck):
@@ -141,61 +123,55 @@ def deliver_packages(truck):
         package = packageHash.search(pkg_id)
         package.set_package_deliveryTruck(truck.tID)
 
-    while len(unvisited_packages)>0: # will continue until there are no unvisited packages
-        # Update package 9's address if it is past 10:30 AM
-        update_package_9_address(packageHash, truck.tTime)
+    while len(unvisited_packages) > 0:  # Continue until all packages are delivered
+        update_package_9_address(packageHash, truck.tTime)  # Handle special case for Package 9
 
-        # call the clustering function to create a list of clusters
-        clusters = optimize_via_clustering(unvisited_packages)
+        # Find the nearest package with the earliest deadline
+        nearest_pkg_id = None
+        shortest_distance = float('inf')
+        earliest_deadline = datetime.max
 
-        for cluster in clusters:
-            # Sort the packages in each cluster by their delivery deadline
-            #using a lambda function as key for sort to avoid new fucntion, and for clarity
-            cluster.sort(key=lambda pkg_id: (
-                datetime.strptime(packageHash.search(pkg_id).deadline, "%I:%M %p") # will get deadline
-                if packageHash.search(pkg_id).deadline != "EOD" # if deadline is not EOD it will be prioritized
-                else datetime.max # if the deadline is EOD then it the deadline will be declared the maximum time available/ the lowest priority
-            ))
-            #While clusters remain on the list
-            while len(clusters)>0:
-                # Find the nearest package within the cluster
-                nearest_pkg_id = None       # initializing variables
-                shortest_distance = float('inf')  # sets the shortest distance to the largest number
+        for pkg_id in unvisited_packages:
+            package = packageHash.search(pkg_id)
+            destination_index = address_to_index[package.address]
+            distance = float(distanceMatrix[current_index][destination_index])
 
-                for pkg_id in cluster: #for each package
-                    package = packageHash.search(pkg_id) # a look-up package details in hash
-                    destination_index = address_to_index[package.address] # destination index will be found from dict
-                    distance = float(distanceMatrix[current_index][destination_index]) #fdistance will be looked up on adjacency matrix via index
-                    #Identify the package with the shortest distance to current package
-                    #SPECIAL Case for package 9 so it isn't delivered before it is updated.
-                    if pkg_id == 9 and truck.tTime < datetime.strptime("10:20 AM", "%I:%M %p"):
-                        continue
+            # Skip Package 9 if it is before 10:20 AM
+            if pkg_id == 9 and truck.tTime < datetime.strptime("10:20 AM", "%I:%M %p"):
+                continue
 
-                    if distance < shortest_distance:
-                        nearest_pkg_id = pkg_id
-                        shortest_distance = distance
+            # Determine if this package has the earliest deadline and is closer
+            package_deadline = (
+                datetime.strptime(package.deadline, "%I:%M %p")
+                if package.deadline != "EOD"
+                else datetime.max
+            )
+            if package_deadline < earliest_deadline or (
+                    package_deadline == earliest_deadline and distance < shortest_distance
+            ):
+                nearest_pkg_id = pkg_id
+                shortest_distance = distance
+                earliest_deadline = package_deadline
 
-                if nearest_pkg_id is None:
-                    break  # Safeguard against empty clusters
+        if nearest_pkg_id is None:
+            break  # Safeguard against empty lists
 
-                # Deliver the nearest package
-                package = packageHash.search(nearest_pkg_id)
-                truck.travel_time(shortest_distance)
-                truck.update_mileage(shortest_distance) # update truck
-                truck.deliver_package(package) #update package status and time of delivery
+        # Deliver the nearest package with the earliest deadline
+        package = packageHash.search(nearest_pkg_id)
+        truck.travel_time(shortest_distance)
+        truck.update_mileage(shortest_distance)
+        truck.deliver_package(package)
 
-                # Remove from cluster and unvisited_packages if present
-                cluster.remove(nearest_pkg_id) # remove from cluster
-                if nearest_pkg_id in unvisited_packages: # if in unvisited package list - remove
-                    unvisited_packages.remove(nearest_pkg_id)
-                current_index = address_to_index[package.address] # update current location
-                total_distance += shortest_distance # update total distance
+        # Remove from unvisited packages
+        unvisited_packages.remove(nearest_pkg_id)
+        current_index = address_to_index[package.address]  # Update current location
+        total_distance += shortest_distance
 
-    # Return to the hub
-    hub_distance = float(distanceMatrix[current_index][0]) # calculates distance to hub
-    truck.travel_time(hub_distance) # update truck time when it reaches hub
-    truck.update_mileage(hub_distance) #update truck mileage
-    truck.update_status("Completed Deliveries - At Hub") # will update status of truck
+        # Return to the hub
+    hub_distance = float(distanceMatrix[current_index][0])
+    truck.travel_time(hub_distance)
+    truck.update_mileage(hub_distance)
+    truck.update_status("Completed Deliveries - At Hub")
 
     print(f"""
             Truck {truck.tID} 
@@ -263,10 +239,14 @@ This user input will then be converted into a datetime object so it can be compa
 """
 # Prints TOTAL Mileage of All Trucks
 print(f'Total Mileage of All Trucks: {total_mileage_all_trucks:.2f} \n')  # 122.70 total Mileage of all Trucks
-
+print(lookup_package_by_ID(15))
 #will loop until END is entered into the input
 ask_again = True
 while ask_again:
+ #   startInput = input("1. Look up package\n2. Get Total Mileage\n3. See status of packages at time")
+
+
+
     userInput = input("Please enter a time (HH:MM AM/PM) to see the status of all packages or type END to exit: ")
     try: # error handling to address if wrong format is used in input
         if  userInput == "END":
