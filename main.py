@@ -107,7 +107,6 @@ def deliver_packages(truck):
         package.set_package_deliveryTruck(truck.tID)
 
     while len(unvisited_packages) > 0:  # Continue until all packages are delivered
-        update_package_9_address(packageHash, truck.tTime)  # Handle special case for Package 9
 
         # Find the nearest package with the earliest deadline
         nearest_pkg_id = None
@@ -118,11 +117,11 @@ def deliver_packages(truck):
             package = packageHash.search(pkg_id) #search has for id in hash
             destination_index = address_to_index[package.address] # check dict for index by package address
             distance = float(distanceMatrix[current_index][destination_index]) # use adjacency matrix
-
             # Skip Package 9 if it is before 10:20 AM
             if pkg_id == 9 and truck.tTime < datetime.strptime("10:20 AM", "%I:%M %p"):
                 continue
-
+            else:
+                update_package_9_address(packageHash, truck.tTime)  # Handle special case for Package 9
             # Determine if this package has the earliest deadline and is closer
             package_deadline = (
                 datetime.strptime(package.deadline, "%I:%M %p")
@@ -174,30 +173,33 @@ def finish_it_up(truck1, truck2, truck3):
 AllTrucks = [truck1,truck2,truck3] # a list of all delivery trucks to iterate through
 
 def view_packages_status_by_time(userInput, all_trucks):
-
     userInputTime = datetime.strptime(userInput, "%I:%M %p")  # Convert input time to datetime object
-
     print(f"\nPackage Status at {userInputTime.strftime('%I:%M %p')}:\n")
     for truck in all_trucks:
         print(f"Truck {truck.tID} at {userInputTime.strftime('%I:%M %p')}: ")
         print(f"Mileage: {truck.get_mileage():.2f}")
         print(f"  Packages:")
-
         for pkg_id in truck.tpackages:
             package = packageHash.search(pkg_id)
-            if package.deliveryTime is None:  # Not yet delivered
-                if userInputTime < truck.tstartTime:  # Before the truck departs
-                    package_status = "At the Hub"
-                else:  # After the truck departs
-                    package_status = f"En route on Truck {truck.tID}"
-            else:  # Package has a delivery time
-                delivery_time = datetime.strptime(package.deliveryTime, "%H:%M %p")
-                if userInputTime < truck.tstartTime:  # Before the truck departs
-                    package_status = "At the Hub"
-                elif truck.tstartTime <= userInputTime < delivery_time:  # After departure but before delivery
-                    package_status = f"En route on Truck {truck.tID}"
-                else:  # After delivery
-                    package_status = f"Delivered to {package.address} at {package.deliveryTime}"
+            if pkg_id == 9: # this will be used for special case as the address is 300 State St before and 410 S after 10:20 AM.
+                if userInputTime <= datetime.strptime("10:20 AM",'%I:%M %p'):
+                    package_status = f"En route on Truck {truck.tID} to 300 State St"
+                else:
+                    package_status = f"En route on Truck {truck.tID} to 410 S State St"
+            else:
+                if package.deliveryTime is None:  # Not yet delivered
+                    if userInputTime < truck.tstartTime:  # Before the truck departs
+                        package_status = "At the Hub"
+                    else:  # After the truck departs
+                        package_status = f"En route on Truck {truck.tID} to {package.address}"
+                else:  # Package has a delivery time
+                    delivery_time = datetime.strptime(package.deliveryTime, "%H:%M %p")
+                    if userInputTime < truck.tstartTime:  # Before the truck departs
+                        package_status = "At the Hub"
+                    elif truck.tstartTime <= userInputTime < delivery_time:  # After departure but before delivery
+                        package_status = f"En route on Truck {truck.tID} to {package.address}"
+                    else:  # After delivery
+                        package_status = f"Delivered to {package.address} at {package.deliveryTime}"
 
             # Print the package details
             print(f"    Package {pkg_id}: {package_status}")
@@ -239,5 +241,4 @@ while ask_again:
         except ValueError:
             print("You have either entered an invalid time, or used the wrong format. Enter time in 12hr HH:MM AM/PM format")
     else: print("You have entered an invalid input, please try again")
-
 
