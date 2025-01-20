@@ -1,24 +1,13 @@
-
-
-import csv
+# Devika Prasanth
+# 010101895
 import datetime
 from datetime import datetime
-from time import strftime
-
-import trucks
-
 """
 Initializes WGUPackage class
-
 Function: 
     lookup_package_by_ID: Part B - look-up function that takes the package ID as input and returns package details
-    update_package_9_address: function to update update package 9 at 10:20 am when WGUPS is made aware of the correct address
-    
-
+    update_package_9_address: function to update package 9 at 10:20 AM when WGUPS gets correct address
 """
-
-
-
 class WGUPackage:
     def __init__(self,packageID, address, city, state, zip, deadline, weight, notes, delivery_status ):
         self.packageID = packageID
@@ -34,7 +23,9 @@ class WGUPackage:
         self.deliveryTruck = None
 
     def __str__(self):
-        return f" Package: {self.packageID} Address: {self.address} City: {self.city} State:{self.state} ZIP:{self.zip} Deadline:{self.deadline} Weight:{self.weight} Notes:{self.notes} Status:{self.deliveryStatus}  Delivery:{self.deliveryTime} Truck:{self.deliveryTruck}"
+        return (f" Package: {self.packageID} Address: {self.address} City: {self.city} State:{self.state} "
+                f"ZIP:{self.zip} Deadline:{self.deadline} Weight:{self.weight} Notes:{self.notes} "
+                f"Status:{self.deliveryStatus} Delivery:{self.deliveryTime} Truck:{self.deliveryTruck}")
 
     def set_package_status(self,nstatus):
         self.deliveryStatus = nstatus
@@ -44,20 +35,6 @@ class WGUPackage:
 
     def set_package_deliveryTruck(self, truckID):
         self.deliveryTruck = truckID
-
-
-
-"""
-Part B -Develop a look-up function that takes the package ID as input and returns each of the following 
-corresponding data components:
-    •   delivery address
-    •   delivery deadline
-    •   delivery city
-    •   delivery zip code
-    •   package weight
-    •   delivery status (i.e., at the hub, en route, or delivered), including the delivery time
-"""
-
 
 # This is a function to update package 9 at 10:20 am when WGUPS is made aware of the correct address
 def update_package_9_address(packageHash, truck_time):

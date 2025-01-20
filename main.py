@@ -1,17 +1,12 @@
 # Devika Prasanth
 # 010101895
-
-
 import datetime
 from datetime import datetime
-
-import packages
 from packages import WGUPackage, update_package_9_address
 import HashMap
 import trucks
 import csv
 import numpy as np
-from trucks import DeliveryTrucks
 
 with open("distanceCSV.csv", "r") as distanceCSV:
     deliveryDistance = csv.reader(distanceCSV)
@@ -34,7 +29,7 @@ with open("addressCSV.csv", "r") as addressCSV:
     deliveryAddress = list(deliveryAddress)
     # print(deliveryAddress) - test
 
-#Building Dictionaries
+#Building Dictionaries to for address and index look up
 def build_address_lookup(address_list):
     address_to_index = {}
     address_to_location = {}
@@ -47,18 +42,7 @@ def build_address_lookup(address_list):
         address_to_index[address] = index
         address_to_location[address] = location
         index_to_address[int(index)] = address
-
     return address_to_index, address_to_location, index_to_address
-
-def get_index_by_address(address, address_to_index):
-    return address_to_index.get(address,None) #will get index of when address is entered
-
-def get_location_by_address(address, address_to_location):
-    return address_to_location.get(address,None)
-
-def get_address_by_index(index, index_to_address):
-    return index_to_address.get(int(index),None)
-
 address_to_index, address_to_location, index_to_address = build_address_lookup(deliveryAddress)
 
 #Code derived from (Tepe, Getting Greedy, Who Moved My Data, 2020 WGU) educational material
@@ -86,9 +70,6 @@ def load_package_data(file_name):
 
 packageHash = HashMap.ChainingHashTable()
 load_package_data('packageCSV.csv')
-# Test Package Hash Table
-# for i in range (len(packageHash.table)+1):
-#    print("Key: {} and Package Info {}".format(i+1, packageHash.search(i+1))) #1 to 40 is sent to packageHash.search()
 
 #Look up package ny ID function
 def lookup_package_by_ID(packageID,):
@@ -102,16 +83,18 @@ def lookup_package_by_ID(packageID,):
             ZIP Code: {package.zip}
             Package Weight: {package.weight}
             Delivery Status: {package.deliveryStatus}
-            Delivery Time: {(package.deliveryTime)}""")
+            Delivery Time: {package.deliveryTime}
+            """)
     else:
         return {"Error": f"Package ID {packageID} not found"}
 
 # initialize trucks and manually load with packages
-truck1 = trucks.DeliveryTrucks(1, 0.0, "Western Governors University", "08:00 AM", [1, 7, 8, 13, 14, 15, 16, 19, 20, 29, 30, 34, 37, 39, 40])
-truck2 = trucks.DeliveryTrucks(2, 0.0, "Western Governors University", "09:05 AM", [2, 3, 6, 12, 17, 18, 25, 27, 28, 32, 33, 35, 36, 38])
-truck3 = trucks.DeliveryTrucks(3, 0.0, "Western Governors University", "10:00 AM" , [4, 5, 9, 10, 11, 21, 22, 23, 24, 26, 31]) #datetime.datetime.strptime(truck1.get_truck_time(),'%I:%M %p')
-
-
+truck1 = trucks.DeliveryTrucks(1, 0.0, "Western Governors University",
+                               "08:00 AM", [1, 7, 8, 13, 14, 15, 16, 19, 20, 29, 30, 34, 37, 39, 40])
+truck2 = trucks.DeliveryTrucks(2, 0.0, "Western Governors University",
+                               "09:05 AM", [2, 3, 6, 12, 17, 18, 25, 27, 28, 32, 33, 35, 36, 38])
+truck3 = trucks.DeliveryTrucks(3, 0.0, "Western Governors University",
+                               "10:11 AM" , [4, 5, 9, 10, 11, 21, 22, 23, 24, 26, 31])
 
 def deliver_packages(truck):
     current_index = 0  # Start at the hub/Western Governors University
@@ -130,11 +113,11 @@ def deliver_packages(truck):
         nearest_pkg_id = None
         shortest_distance = float('inf')
         earliest_deadline = datetime.max
-
+        # iterate through packages in the unvisited package list
         for pkg_id in unvisited_packages:
-            package = packageHash.search(pkg_id)
-            destination_index = address_to_index[package.address]
-            distance = float(distanceMatrix[current_index][destination_index])
+            package = packageHash.search(pkg_id) #search has for id in hash
+            destination_index = address_to_index[package.address] # check dict for index by package address
+            distance = float(distanceMatrix[current_index][destination_index]) # use adjacency matrix
 
             # Skip Package 9 if it is before 10:20 AM
             if pkg_id == 9 and truck.tTime < datetime.strptime("10:20 AM", "%I:%M %p"):
@@ -154,7 +137,7 @@ def deliver_packages(truck):
                 earliest_deadline = package_deadline
 
         if nearest_pkg_id is None:
-            break  # Safeguard against empty lists
+            break  # Safeguard against empty lists/run out off packages
 
         # Deliver the nearest package with the earliest deadline
         package = packageHash.search(nearest_pkg_id)
@@ -167,7 +150,7 @@ def deliver_packages(truck):
         current_index = address_to_index[package.address]  # Update current location
         total_distance += shortest_distance
 
-        # Return to the hub
+        # Return to the hub and update truck properties
     hub_distance = float(distanceMatrix[current_index][0])
     truck.travel_time(hub_distance)
     truck.update_mileage(hub_distance)
@@ -185,10 +168,11 @@ def deliver_packages(truck):
 def finish_it_up(truck1, truck2, truck3):
     deliver_packages(truck1)
     deliver_packages(truck2)
-    if (truck1.tstatus == "Completed Deliveries - At Hub") :
+    if truck1.tstatus == "Completed Deliveries - At Hub":
         deliver_packages(truck3)
 
 AllTrucks = [truck1,truck2,truck3] # a list of all delivery trucks to iterate through
+
 def view_packages_status_by_time(userInput, all_trucks):
 
     userInputTime = datetime.strptime(userInput, "%I:%M %p")  # Convert input time to datetime object
@@ -196,7 +180,7 @@ def view_packages_status_by_time(userInput, all_trucks):
     print(f"\nPackage Status at {userInputTime.strftime('%I:%M %p')}:\n")
     for truck in all_trucks:
         print(f"Truck {truck.tID} at {userInputTime.strftime('%I:%M %p')}: ")
-        print(f"Mileage: {truck.get_mileage()}")
+        print(f"Mileage: {truck.get_mileage():.2f}")
         print(f"  Packages:")
 
         for pkg_id in truck.tpackages:
@@ -225,36 +209,35 @@ finish_it_up(truck1,truck2, truck3)
 
 #Calculate total Mileage of All trucks
 total_mileage_all_trucks = truck1.get_mileage() + truck2.get_mileage() + truck3.get_mileage()
-
 """
-Part D - Provide an intuitive interface for the user to view the delivery status (including the delivery time) of any 
-package at any time and the total mileage traveled by all trucks. (The delivery status should report the package as at 
-the hub, en route, or delivered. Delivery status must include the time.)
-    
+Part D - Provide an intuitive interface:
 This interface  uses exception handling to give user another chance to enter the time correctly if they fail the first time. 
 User can see the total milage of all trucks at top of output screen. The user will then be prompted to enter in a time using
 a 12hr HH:MM AM/PM format. 
 This user input will then be converted into a datetime object so it can be compared the package delivery times. 
 
 """
-# Prints TOTAL Mileage of All Trucks
-print(f'Total Mileage of All Trucks: {total_mileage_all_trucks:.2f} \n')  # 122.70 total Mileage of all Trucks
-print(lookup_package_by_ID(15))
 #will loop until END is entered into the input
+#Will go though prompts to allow user to see package detailes, mileage, and package status by time
 ask_again = True
 while ask_again:
- #   startInput = input("1. Look up package\n2. Get Total Mileage\n3. See status of packages at time")
-
-
-
-    userInput = input("Please enter a time (HH:MM AM/PM) to see the status of all packages or type END to exit: ")
-    try: # error handling to address if wrong format is used in input
-        if  userInput == "END":
-            print("Bye!")
-            ask_again = False
-        else:
-            view_packages_status_by_time(userInput, AllTrucks)
-    except ValueError:
-        print("You have either entered an invalid time, or used the wrong format. Enter time in 12hr HH:MM AM/PM format")
+    startInput = input("1. Look up package\n2. Get Total Mileage\n3. See status of packages by time\nPlease enter 1 , 2 , or 3 : ")
+    if startInput == "1":
+        userInputPackageIDLookUp = input("Please enter in the package ID you would like to look up : ")
+        print(lookup_package_by_ID(int(userInputPackageIDLookUp)))
+    elif startInput == "2":
+        print(f'\nTotal Mileage of All Trucks: {total_mileage_all_trucks:.2f} \n')
+        print(f'Truck 1 : {truck1.get_mileage():.2f} \nTruck 2 : {truck2.get_mileage():.2f} \nTruck 3 : {truck3.get_mileage():.2f}\n')
+    elif startInput == "3":
+        userInput = input("Please enter a time (HH:MM AM/PM) to see the status of all packages or type END to exit: ")
+        try: # error handling to address if wrong format is used in input
+            if  userInput == "END":
+                print("Bye!")
+                ask_again = False
+            else:
+                view_packages_status_by_time(userInput, AllTrucks)
+        except ValueError:
+            print("You have either entered an invalid time, or used the wrong format. Enter time in 12hr HH:MM AM/PM format")
+    else: print("You have entered an invalid input, please try again")
 
 
