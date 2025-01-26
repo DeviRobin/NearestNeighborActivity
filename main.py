@@ -6,7 +6,7 @@ from packages import WGUPackage, update_package_9_address
 import HashMap
 import trucks
 import csv
-
+import numpy as np
 
 with open("distanceCSV.csv", "r") as distanceCSV:
     deliveryDistance = csv.reader(distanceCSV)
@@ -14,14 +14,15 @@ with open("distanceCSV.csv", "r") as distanceCSV:
         [float(value) if value else None for value in row] for row in deliveryDistance
     ]
     # #convert to distance matrix
-    distanceMatrix = [[float(value) if value else 0.0 for value in row] for row in deliveryDistance]
-    rows = len(distanceMatrix)
-    cols = len(distanceMatrix[0]) if rows > 0 else 0
+    distanceMatrix = np.array(deliveryDistance, dtype=float)   #dimensions = distanceMatrix.shape
+    # fill in top of adjacency matrix
+    rows, cols = distanceMatrix.shape
     for i in range(rows):
         for j in range(i + 1, cols):
-            if distanceMatrix[i][j] == 0.0:
+            if np.isnan(distanceMatrix[i][j]) or distanceMatrix[i][j] == 0.0:
                 distanceMatrix[i][j] = distanceMatrix[j][i]
-    print(distanceMatrix)
+    distanceMatrix = np.nan_to_num(distanceMatrix)
+    # print(distanceMatrix)   -test
 
 with open("addressCSV.csv", "r") as addressCSV:
     deliveryAddress = csv.reader(addressCSV)
