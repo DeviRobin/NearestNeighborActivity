@@ -34,7 +34,7 @@ class DeliveryTrucks:
     def deliver_package(self,package):
         package.set_package_status("Delivered")
         package.set_package_deliveryTime(datetime.strftime(self.tTime,'%I:%M %p'))
-        print(f"Package {package.packageID} delivered at {self.tTime.strftime('%I:%M %p')}")
+        #print(f"Package {package.packageID} delivered at {self.tTime.strftime('%I:%M %p')}") - for test
 
     # calculates travel time by dividing distance by mph/hr to get hours traveled.
     # Adds travel time to truck time

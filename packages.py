@@ -46,6 +46,6 @@ def update_package_9_address(packageHash, truck_time):
             package_9.address ="410 S State St"
             package_9.city = "Salt Lake City"
             package_9.zip = 84111
-            print("Package #9 address updated to 410 S. State St., Salt Lake City, UT 84111")
+            # print("Package #9 address updated to 410 S. State St., Salt Lake City, UT 84111") -test
 
 

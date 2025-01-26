@@ -155,12 +155,12 @@ def deliver_packages(truck):
     truck.update_mileage(hub_distance)
     truck.update_status("Completed Deliveries - At Hub")
 
-    print(f"""
-            Truck {truck.tID} 
-            Return to Hub at: {truck.tTime.strftime('%I:%M:%p')} 
-            Mileage: {truck.tmileage:.2f}
-            Current Status: {truck.tstatus}
-            """)
+    # print(f"""
+    #         Truck {truck.tID}
+    #         Return to Hub at: {truck.tTime.strftime('%I:%M:%p')}
+    #         Mileage: {truck.tmileage:.2f}
+    #         Current Status: {truck.tstatus}
+    #         """) - for test
     return truck.tmileage, truck.tTime.strftime('%I:%M:%p')
 
 #function to simulate delivery of all packages, ensures truck 3 does not leave until truck 1 is at hub.
@@ -183,23 +183,23 @@ def view_packages_status_by_time(userInput, all_trucks):
             package = packageHash.search(pkg_id)
             if pkg_id == 9: # this will be used for special case as the address is 300 State St before and 410 S after 10:20 AM.
                 if userInputTime <= datetime.strptime("10:20 AM",'%I:%M %p'):
-                    package_status = f"En route on Truck {truck.tID} to 300 State St"
+                    package_status = f"DELIVERY ADDRESS: 300 State St | DEADLINE: {package.deadline} | STATUS : En route | TruckID : {truck.tID} "
                 else:
-                    package_status = f"En route on Truck {truck.tID} to 410 S State St"
+                    package_status = f"DELIVERY ADDRESS: 410 S State St | DEADLINE: {package.deadline} | STATUS : En route | TruckID : {truck.tID}"
             else:
                 if package.deliveryTime is None:  # Not yet delivered
                     if userInputTime < truck.tstartTime:  # Before the truck departs
-                        package_status = "At the Hub"
+                        package_status = f"DELIVERY ADDRESS: {package.address} | DEADLINE: {package.deadline} | STATUS : AT HUB | TruckID : To be loaded "
                     else:  # After the truck departs
-                        package_status = f"En route on Truck {truck.tID} to {package.address}"
+                        package_status = f"DELIVERY ADDRESS: {package.address} | DEADLINE: {package.deadline} | STATUS : EN ROUTE | TruckID : {truck.tID}"
                 else:  # Package has a delivery time
                     delivery_time = datetime.strptime(package.deliveryTime, "%H:%M %p")
                     if userInputTime < truck.tstartTime:  # Before the truck departs
-                        package_status = "At the Hub"
+                        package_status = f"DELIVERY ADDRESS: {package.address} | DEADLINE: {package.deadline} | STATUS : AT HUB | TruckID : To be loaded "
                     elif truck.tstartTime <= userInputTime < delivery_time:  # After departure but before delivery
-                        package_status = f"En route on Truck {truck.tID} to {package.address}"
+                        package_status = f"DELIVERY ADDRESS: {package.address} | DEADLINE: {package.deadline} | STATUS : EN ROUTE | TruckID : {truck.tID} "
                     else:  # After delivery
-                        package_status = f"Delivered to {package.address} at {package.deliveryTime}"
+                        package_status = f"DELIVERY ADDRESS: {package.address} | DELIVERY TIME: {package.deliveryTime} | DEADLINE: {package.deadline} | STATUS : DELIVERED | TruckID : {truck.tID} "
 
             # Print the package details
             print(f"    Package {pkg_id}: {package_status}")
@@ -223,14 +223,11 @@ This user input will then be converted into a datetime object so it can be compa
 #Will go though prompts to allow user to see package detailes, mileage, and package status by time
 ask_again = True
 while ask_again:
-    startInput = input("1. Look up package\n2. Get Total Mileage\n3. See status of packages by time\nPlease enter 1 , 2 , or 3 : ")
+    startInput = input("1. Get Total Mileage\n2. See status of packages by time\nPlease enter 1 or 2 : ")
     if startInput == "1":
-        userInputPackageIDLookUp = input("Please enter in the package ID you would like to look up : ")
-        print(lookup_package_by_ID(int(userInputPackageIDLookUp)))
-    elif startInput == "2":
         print(f'\nTotal Mileage of All Trucks: {total_mileage_all_trucks:.2f} \n')
         print(f'Truck 1 : {truck1.get_mileage():.2f} \nTruck 2 : {truck2.get_mileage():.2f} \nTruck 3 : {truck3.get_mileage():.2f}\n')
-    elif startInput == "3":
+    elif startInput == "2":
         userInput = input("Please enter a time (HH:MM AM/PM) to see the status of all packages or type END to exit: ")
         try: # error handling to address if wrong format is used in input
             if  userInput == "END":
